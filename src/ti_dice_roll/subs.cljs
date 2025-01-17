@@ -8,6 +8,11 @@
    (:combatants db)))
 
 (re-frame/reg-sub
+ ::combat-rounds
+ (fn [db]
+   (:combat-rounds db)))
+
+(re-frame/reg-sub
  ::active-panel
  (fn [db _]
    (:active-panel db)))
