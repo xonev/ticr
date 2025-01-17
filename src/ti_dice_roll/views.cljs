@@ -57,7 +57,7 @@
             (-> @combatants first :units keys))]]
      [:button {:on-click #(re-frame/dispatch [::events/roll-combat-round])} "Roll Combat Round"]
 
-     (map-indexed #(combat-round @combatants %1 %2) @combat-rounds)]))
+     (reverse (map-indexed #(combat-round @combatants %1 %2) @combat-rounds))]))
 
 (defmethod routes/panels :home-panel [] [home-panel])
 
