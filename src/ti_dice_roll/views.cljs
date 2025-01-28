@@ -37,15 +37,31 @@
 
 (defn home-panel []
   (let [combatants (re-frame/subscribe [::subs/combatants])
-        combat-rounds (re-frame/subscribe [::subs/combat-rounds])]
+        combat-rounds (re-frame/subscribe [::subs/combat-rounds])
+        custom-dice (re-frame/subscribe [::subs/custom-dice])]
     [:div
+     [:a {:on-click #(re-frame/dispatch [::events/navigate :about])
+          :href ""}
+      "About"]
+     [:h1
+      {:class (styles/level1)}
+      "Custom Roller"]
+     [:div
+      [:label {:for "custom-dice-count"} "Number of dice"]
+      [:input {:type "number"
+               :id "custom-dice-count"
+               :value (get @custom-dice :num-dice 0)
+               :on-change #(re-frame/dispatch [::events/update-custom-dice-count (-> % .-target .-value js/parseInt)])}]
+      [:button {:on-click #(re-frame/dispatch [::events/roll-custom-dice])} "Roll!"]
+      (let [rolls (get @custom-dice :rolls)]
+        (if (> (count rolls) 0)
+          [:div
+           [:h2 "Roll result"]
+           [:div
+            (s/join ", " (last rolls))]]))]
      [:h1
       {:class (styles/level1)}
       (str "Combat Roller")]
-     [:div
-      [:a {:on-click #(re-frame/dispatch [::events/navigate :about])
-           :href ""}
-       "About"]]
      [:table
       [:thead
        [:tr

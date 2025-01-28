@@ -12,7 +12,9 @@
             :warsun}})
 
 (def default-db
-  {:combatants [{:player 1
+  {:custom-dice {:num-dice 0
+                 :rolls []}
+   :combatants [{:player 1
                  :role :attacker
                  :units {:fighters 5
                          :carriers 1

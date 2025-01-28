@@ -24,10 +24,29 @@
    (let [combatants (:combatants db)]
      (assoc cofx :combat-rolls (map roll-for-combatant combatants)))))
 
+(re-frame/reg-cofx
+ ::roll-custom-dice
+ (fn [{:keys [db] :as cofx} _]
+   (let [num-custom-dice (get-in db [:custom-dice :num-dice] 0)]
+     (assoc cofx :custom-dice-roll (roll-d10s num-custom-dice)))))
+
 (re-frame/reg-event-db
  ::initialize-db
  (fn-traced [_ _]
             db/default-db))
+
+(re-frame/reg-event-db
+ ::update-custom-dice-count
+ (fn-traced [db [_ new-dice-count]]
+            (assoc-in db [:custom-dice :num-dice] new-dice-count)))
+
+(re-frame/reg-event-fx
+ ::roll-custom-dice
+ [(re-frame/inject-cofx ::roll-custom-dice)]
+ (fn-traced [{:keys [db custom-dice-roll]} [_]]
+            {:db (assoc-in db [:custom-dice :rolls]
+                           (conj (get-in db [:custom-dice :rolls] [])
+                                 custom-dice-roll))}))
 
 (re-frame/reg-event-db
  ::update-unit-count
