@@ -7,12 +7,16 @@
    [ti-dice-roll.routes :as routes]
    [ti-dice-roll.subs :as subs]))
 
-(defn combatant-display [i combatant]
-  [:th (str "Combatant " (inc i) " (" (:role combatant) ")")])
+(defn combat-type-selector []
+  [:input :type "radio"])
 
-(defn combat-round [combatants i combat-round-roll]
-  [:div
-   [:h2 (str "Round " (inc i))]
+(defn combatant-display [i combatant]
+  [:th {:key (s/join "-" ["combatant" (:player combatant) i])}
+   (str "Combatant " (inc i) " (" (:role combatant) ")")])
+
+(defn combat-round [combatants round-i combat-round-roll]
+  [:div {:key (str "combat-round-" round-i)}
+   [:h2 (str "Round " (inc round-i))]
    [:table
     [:thead
      [:tr
@@ -20,10 +24,12 @@
       (map-indexed combatant-display combatants)]]
     [:tbody
      (map (fn [unit]
-            [:tr
+            [:tr {:key unit}
              [:td unit]
-             (map-indexed (fn [i _]
-                            [:td (s/join ", " (get (nth combat-round-roll i) unit))])
+             (map-indexed (fn [i combatant]
+                            (let [combatant-unit-roll (get (nth combat-round-roll i) unit)]
+                              [:td {:key (s/join "-" ["player" (:player combatant) round-i])}
+                               (s/join ", " combatant-unit-roll)]))
                           combatants)])
           (-> combatants first :units keys))]]])
 
@@ -46,15 +52,17 @@
         [:th]
         (map-indexed combatant-display @combatants)]]
       [:tbody
-       (map (fn [unit]
-              [:tr
-               [:td unit]
-               (map-indexed (fn [i combatant]
-                              [:td [:input {:type "number"
-                                            :value (get (:units combatant) unit)
-                                            :on-change #(re-frame/dispatch [::events/update-unit-count i unit (-> % .-target .-value js/parseInt)])}]])
-                            @combatants)])
-            (-> @combatants first :units keys))]]
+       (doall
+        (map (fn [unit]
+               [:tr {:key unit}
+                [:td unit]
+                (map-indexed (fn [i combatant]
+                               [:td {:key (s/join "-" ["player" (:player combatant) unit])}
+                                [:input {:type "number"
+                                         :value (get (:units combatant) unit)
+                                         :on-change #(re-frame/dispatch [::events/update-unit-count i unit (-> % .-target .-value js/parseInt)])}]])
+                             @combatants)])
+             (-> @combatants first :units keys)))]]
      [:button {:on-click #(re-frame/dispatch [::events/roll-combat-round])} "Roll Combat Round"]
 
      (reverse (map-indexed #(combat-round @combatants %1 %2) @combat-rounds))]))
