@@ -3,6 +3,7 @@
    [clojure.string :as s]
    [re-frame.core :as re-frame]
    [ti-dice-roll.styles :as styles]
+   [ti-dice-roll.db :as db]
    [ti-dice-roll.events :as events]
    [ti-dice-roll.routes :as routes]
    [ti-dice-roll.subs :as subs]))
@@ -10,33 +11,44 @@
 (defn combat-type-selector []
   [:input :type "radio"])
 
+(defn combatant-name [i combatant]
+  (str "Combatant " (inc i) " (" (:role combatant) ")"))
+
+(defn combatant-key [i combatant]
+  (s/join "-" ["combatant" (:player combatant) i]))
+
 (defn combatant-display [i combatant]
-  [:th {:key (s/join "-" ["combatant" (:player combatant) i])}
-   (str "Combatant " (inc i) " (" (:role combatant) ")")])
+  [:th {:key (combatant-key i combatant)}
+   (combatant-name i combatant)])
 
 (defn combat-round [combatants round-i combat-round-roll]
   [:div {:key (str "combat-round-" round-i)}
    [:h2 (str "Round " (inc round-i))]
-   [:table
-    [:thead
-     [:tr
-      [:th]
-      (map-indexed combatant-display combatants)]]
-    [:tbody
-     (map (fn [unit]
-            [:tr {:key unit}
-             [:td unit]
-             (map-indexed (fn [i combatant]
-                            (let [combatant-unit-roll (get (nth combat-round-roll i) unit)]
-                              [:td {:key (s/join "-" ["player" (:player combatant) round-i])}
-                               (s/join ", " combatant-unit-roll)]))
-                          combatants)])
-          (-> combatants first :units keys))]]])
+   (map-indexed (fn [i combatant]
+                  (let [key (s/join "-" ["combatant" i])
+                        combatant-round-rolls (nth combat-round-roll i)]
+                    (seq [[:h3 {:key (combatant-key i combatant)} (combatant-name i combatant)]
+                          [:table {:key (str "rolls-" (combatant-key i combatant))}
+                           [:thead
+                            [:tr [:th {:key "0"}]
+                             (map (fn [unit-rolls]
+                                    (let [[unit-id rolls] unit-rolls]
+                                      [:th {:key unit-id} unit-id]))
+                                  combatant-round-rolls)]]
+                           [:tbody
+                            [:tr
+                             [:td "Rolls"]
+                             (map (fn [unit-rolls]
+                                    (let [[unit-id rolls] unit-rolls]
+                                      [:td {:key unit-id} (s/join "," rolls)]))
+                                  combatant-round-rolls)]]]])))
+                combatants)])
 
 ;; home
 
 (defn home-panel []
-  (let [combatants (re-frame/subscribe [::subs/combatants])
+  (let [combat-type (re-frame/subscribe [::subs/combat-type])
+        combatants (re-frame/subscribe [::subs/combatants])
         combat-rounds (re-frame/subscribe [::subs/combat-rounds])
         custom-dice (re-frame/subscribe [::subs/custom-dice])]
     [:div
@@ -75,10 +87,10 @@
                 (map-indexed (fn [i combatant]
                                [:td {:key (s/join "-" ["player" (:player combatant) unit])}
                                 [:input {:type "number"
-                                         :value (get (:units combatant) unit)
+                                         :value (get (:units combatant) unit 0)
                                          :on-change #(re-frame/dispatch [::events/update-unit-count i unit (-> % .-target .-value js/parseInt)])}]])
                              @combatants)])
-             (-> @combatants first :units keys)))]]
+             (get db/unit-types @combat-type)))]]
      [:button {:on-click #(re-frame/dispatch [::events/roll-combat-round])} "Roll Combat Round"]
 
      (reverse (map-indexed #(combat-round @combatants %1 %2) @combat-rounds))]))

@@ -3,6 +3,11 @@
    [re-frame.core :as re-frame]))
 
 (re-frame/reg-sub
+ ::combat-type
+ (fn [db]
+   (:combat-type db)))
+
+(re-frame/reg-sub
  ::custom-dice
  (fn [db]
    (:custom-dice db)))
